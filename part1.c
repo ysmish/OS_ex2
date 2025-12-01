@@ -39,6 +39,7 @@ int main(int argc, char *argv[]) {
 
     if (pid1 == 0) {
         /* first child */
+        sleep(2);
         for (int i = 0; i < times_to_write; i++) {
             charsw = write(fdout, child1_message, strlen(child1_message));
             if (charsw < 0) {
@@ -50,11 +51,6 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-    /* original parent: wait for both children */
-    if (waitpid(pid1, NULL, 0) != pid1)
-        perror("waitpid error for child1");
-
-
     /* original parent continues and creates the second child */
     if ((pid2 = fork()) < 0) {
         perror("fork error");
@@ -63,6 +59,7 @@ int main(int argc, char *argv[]) {
 
     if (pid2 == 0) {
         /* second child (child of the original parent) */
+        sleep(2);
         for (int i = 0; i < times_to_write; i++) {
             charsw = write(fdout, child2_message, strlen(child2_message));
             if (charsw < 0) {
@@ -73,7 +70,12 @@ int main(int argc, char *argv[]) {
         close(fdout);
         exit(0);
     }
-    /* original parent: wait for second child */
+
+    /* original parent: wait for both children */
+    if (waitpid(pid1, NULL, 0) != pid1)
+        perror("waitpid error for child1");
+
+        
     if (waitpid(pid2, NULL, 0) != pid2)
         perror("waitpid error for child2");
 
