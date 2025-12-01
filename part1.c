@@ -12,7 +12,7 @@
 
 int main(int argc, char *argv[]) {
     int fdout;
-    ssize_t charsw;  /* how many chars were actually written */
+    ssize_t charsw;  // how manny chars were written
     
     if (argc != 5) {
         fprintf(stderr, "Usage: %s <parent_message> <child1_message> <child2_message> <count>\n", argv[0]);
@@ -31,15 +31,13 @@ int main(int argc, char *argv[]) {
 
     pid_t pid1, pid2;
 
-    /* create first child */
-    if ((pid1 = fork()) < 0) {
+    if ((pid1 = fork()) < 0) { //create child1
         perror("fork error");
         return 1;
     }
 
     if (pid1 == 0) {
-        /* first child */
-        sleep(2);
+        sleep(2);//child1
         for (int i = 0; i < times_to_write; i++) {
             charsw = write(fdout, child1_message, strlen(child1_message));
             if (charsw < 0) {
@@ -51,14 +49,14 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-    /* original parent continues and creates the second child */
+    //parent continues and creates the second child 
     if ((pid2 = fork()) < 0) {
         perror("fork error");
         return 1;
     }
 
     if (pid2 == 0) {
-        /* second child (child of the original parent) */
+        //child2
         sleep(2);
         for (int i = 0; i < times_to_write; i++) {
             charsw = write(fdout, child2_message, strlen(child2_message));
@@ -71,7 +69,7 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-    /* original parent: wait for both children */
+    //wait for both children
     if (waitpid(pid1, NULL, 0) != pid1)
         perror("waitpid error for child1");
 

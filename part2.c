@@ -11,7 +11,7 @@
 #define LOCK_FILE "lockfile.lock"
 #define SIZE 10
 
-int LOCK_FILE_fd = -1;   /* initialize to invalid fd */
+int LOCK_FILE_fd = -1;   //file descriptor for the lock file
 
 void lock(void);
 void unlock(void);
@@ -23,33 +23,29 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     int times_to_write = atoi(argv[argc - 1]);
-
-    int num_of_children = argc - 2;                /* number of message-children */
+    int num_of_children = argc - 2;
     pid_t *pids = malloc(num_of_children * sizeof(pid_t));
     if (!pids) {
         perror("malloc");
         return 1;
     }
 
-    /* fork all children first */
-    for (int i = 0; i < num_of_children; i++) {
+    for (int i = 0; i < num_of_children; i++) {//fork all children
         pid_t pid;
         if ((pid = fork()) < 0) {
             perror("fork error");
             free(pids);
             return 1;
         }
-        if (pid == 0) {
-            /* child process */
+        if (pid == 0) {//for nth child process
             lock();
             writemessage(argv[i + 1], times_to_write);
             unlock();
             exit(0);
         }
-        pids[i] = pid; /* parent records child's pid and continues looping */
+        pids[i] = pid; //save child's pid and continue loop
     }
-
-    /* parent waits for all children after forking them */
+    //parent waits for children
     for (int i = 0; i < num_of_children; i++) {
         if (waitpid(pids[i], NULL, 0) != pids[i])
             perror("waitpid error for child");
@@ -62,13 +58,13 @@ int main(int argc, char *argv[]) {
 void lock(void) {
     int fd;
     while ((fd = open(LOCK_FILE, O_CREAT | O_EXCL | O_WRONLY, 0666)) == -1) {
-        if (errno != EEXIST) { /* unexpected error */
+        if (errno != EEXIST) {
             perror("open lockfile");
             exit(EXIT_FAILURE);
         }
-        usleep(100); /* wait and retry if lock exists */
+        usleep(100); //wait and try again if lock exists
     }
-    LOCK_FILE_fd = fd; /* remember acquired fd */
+    LOCK_FILE_fd = fd; //save acquired fd
 }
 
 void unlock(void) {
