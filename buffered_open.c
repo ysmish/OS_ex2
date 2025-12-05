@@ -103,12 +103,9 @@ ssize_t buffered_read(buffered_file_t *bf, void *buf, size_t count) {
             bf->read_buffer_pos = 0;
             in_buffer = bytes_read; 
         }
-
         size_t bytes_needed = count - total_read;
-        size_t to_copy = (bytes_needed < in_buffer) ? bytes_needed : in_buffer;
-        
+        size_t to_copy = (bytes_needed < in_buffer) ? bytes_needed : in_buffer;     
         memcpy(dest + total_read, bf->read_buffer + bf->read_buffer_pos, to_copy);
-
         bf->read_buffer_pos += to_copy;
         total_read += to_copy;
         bf->file_offset += to_copy; 
@@ -157,7 +154,6 @@ ssize_t buffered_write(buffered_file_t *bf, const void *buf, size_t count) {
         }
         
         memcpy(bf->write_buffer + bf->write_buffer_pos, src + total_written, to_copy);
-        
         bf->write_buffer_pos += to_copy;
         total_written += to_copy;
     }
@@ -179,14 +175,14 @@ int buffered_flush(buffered_file_t *bf) {
     size_t total_written = 0;
 
     if (bf->preappend) {// --- O_PREAPPEND LOGIC ---
-        off_t current_file_size = lseek(bf->fd, 0, SEEK_END);//get file size
-        if (current_file_size == -1) {
+        off_t file_size = lseek(bf->fd, 0, SEEK_END);//get file size
+        if (file_size == -1) {
             perror("buffered_flush: lseek end error");
             return -1;
         }
         char *temp_buf = NULL;//alloc temp buf to hold content
-        if (current_file_size > 0) {
-            temp_buf = malloc(current_file_size);
+        if (file_size > 0) {
+            temp_buf = malloc(file_size);
             if (!temp_buf) {
                 errno = ENOMEM;
                 perror("buffered_flush: memory allocation for preappend");
@@ -199,8 +195,8 @@ int buffered_flush(buffered_file_t *bf) {
             }
             ssize_t r = 0;
             size_t total_read_temp = 0;
-            while (total_read_temp < current_file_size) {
-                r = read(bf->fd, temp_buf + total_read_temp, current_file_size - total_read_temp);
+            while (total_read_temp < file_size) {
+                r = read(bf->fd, temp_buf + total_read_temp, file_size - total_read_temp);
                 if (r <= 0) {
                     perror("buffered_flush: error reading existing content");
                     free(temp_buf);
@@ -224,10 +220,10 @@ int buffered_flush(buffered_file_t *bf) {
             }
             total_written += written;
         }
-        if (current_file_size > 0 && temp_buf) {//append old content back
+        if (file_size > 0 && temp_buf) {//append old content back
             size_t written_old = 0;
-            while (written_old < current_file_size) {
-                ssize_t w = write(bf->fd, temp_buf + written_old, current_file_size - written_old);
+            while (written_old < file_size) {
+                ssize_t w = write(bf->fd, temp_buf + written_old, file_size - written_old);
                 if (w == -1) {
                     if (errno == EINTR) continue;
                     perror("buffered_flush: write error (restoring old data)");
