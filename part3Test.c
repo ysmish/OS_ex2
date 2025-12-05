@@ -407,21 +407,27 @@ int test6(){
 int main() {
     int countTestPassed = 0;
     if (test1() == 0){
+        printf("\033[0;32mTEST 1: passed!\n\033[0m");
         countTestPassed++;
     }
     if (test2() == 0){
+        printf("\033[0;32mTEST 2: passed!\n\033[0m");
         countTestPassed++;
     }
     if (test3() == 0){
+        printf("\033[0;32mTEST 3: passed!\n\033[0m");
         countTestPassed++;
     }
     if (test4() == 0){
+        printf("\033[0;32mTEST 4: passed!\n\033[0m");
         countTestPassed++;
     }
     if (test5() == 0){
+        printf("\033[0;32mTEST 5: passed!\n\033[0m");
         countTestPassed++;
     }
     if(test6() == 0){
+        printf("\033[0;32mTEST 6: passed!\n\033[0m");
         countTestPassed++;
     }
     if (countTestPassed == 6){
