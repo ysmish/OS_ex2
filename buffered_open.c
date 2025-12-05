@@ -23,7 +23,7 @@ buffered_file_t *buffered_open(const char *pathname, int flags, ...) {
     // 2. Allocate buffered_file_t
     buffered_file_t *bf = malloc(sizeof(buffered_file_t));
     if (bf == NULL) {
-        // errno is set by malloc
+        errno = ENOMEM;
         return NULL;
     }
 
@@ -32,11 +32,8 @@ buffered_file_t *buffered_open(const char *pathname, int flags, ...) {
     bf->write_buffer = malloc(BUFFER_SIZE);
     
     if (bf->read_buffer == NULL || bf->write_buffer == NULL) {
-        // Use perror correctly (no extra quotes or newlines)
-        // Set specific error for memory failure, if needed, before calling perror.
         errno = ENOMEM;
         perror("buffered_open: memory allocation error"); 
-        
         free(bf->read_buffer);
         free(bf->write_buffer);
         free(bf);
@@ -55,7 +52,7 @@ buffered_file_t *buffered_open(const char *pathname, int flags, ...) {
 
     // Initialize required state for synchronization
     bf->last_operation = 0;
-    bf->file_offset = 0; // Assuming we're tracking this
+    bf->file_offset = 0; 
 
     // 5. Open file (using the mode argument if needed)
     bf->fd = open(pathname, bf->flags, mode); 
@@ -70,7 +67,11 @@ buffered_file_t *buffered_open(const char *pathname, int flags, ...) {
 }
 
 ssize_t buffered_read(buffered_file_t *bf, void *buf, size_t count) {
-    // Implementation needed here
+    // Implementation stub for now
+    (void)bf;
+    (void)buf;
+    (void)count;
+    fprintf(stderr, "buffered_read: Not yet fully implemented.\n");
     return -1;
 }
 
@@ -110,8 +111,6 @@ ssize_t buffered_write(buffered_file_t *bf, const void *buf, size_t count) {
         
         bf->write_buffer_pos += to_copy;
         
-        // Removed: bf->wb_stored += to_write; (Undefined member)
-        
         bf->last_operation = 2; // Indicate the last operation was a write
         total_written += to_copy;
     }
@@ -120,34 +119,60 @@ ssize_t buffered_write(buffered_file_t *bf, const void *buf, size_t count) {
 }
 
 int buffered_flush(buffered_file_t *bf) {
-    // Note: O_PREAPPEND logic is currently missing here. This is the simple flush.
+    // NOTE: This is the simple flush. O_PREAPPEND logic is missing.
     
     if (bf == NULL || bf->fd == -1) {
-        perror("buffered_flush: invalid file descriptor or pointer");
+        // Only report error if we were trying to flush data
+        if (bf && bf->write_buffer_pos > 0) {
+            perror("buffered_flush: invalid file descriptor or pointer");
+        }
         return -1;
     }
     if (bf->write_buffer_pos == 0) {
         return 0; // Nothing to flush
     }
     
+    // Simple write logic (no O_PREAPPEND handling yet)
     size_t total_written = 0;
     while (total_written < bf->write_buffer_pos) {
         ssize_t written = write(bf->fd, bf->write_buffer + total_written, bf->write_buffer_pos - total_written);
         if (written == -1) {
-            // write sets errno
             perror("buffered_flush: write error"); 
             return -1;
         }
         total_written += written;
     }
     
+    // Update file offset and clear buffer
+    bf->file_offset += total_written;
     bf->write_buffer_pos = 0;
-    // Removed: bf->wb_stored = 0; (Undefined member)
     
     return 0;
 }
 
 int buffered_close(buffered_file_t *bf) {
-    // Implementation needed here
-    return -1;
+    if (bf == NULL) return 0;
+
+    int flush_res = 0;
+    int close_res = 0;
+
+    // 1. Flush pending writes (CRUCIAL step)
+    if (bf->write_buffer_pos > 0) {
+        flush_res = buffered_flush(bf);
+    }
+
+    // 2. Close file descriptor
+    close_res = close(bf->fd);
+    
+    // 3. Free resources
+    free(bf->read_buffer);
+    free(bf->write_buffer);
+    free(bf);
+
+    // Return combined status
+    if (flush_res == -1 || close_res == -1) {
+        return -1;
+    }
+
+    return 0;
 }
