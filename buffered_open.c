@@ -19,11 +19,11 @@ buffered_file_t *buffered_open(const char *pathname, int flags, ...) {
         mode = va_arg(args, mode_t);
         va_end(args);
     }
-    
     // 2.allocate buffered_file_t
     buffered_file_t *bf = malloc(sizeof(buffered_file_t));
     if (bf == NULL) {
         errno = ENOMEM;
+        perror("buffered_open: struct memory allocation error");
         return NULL;
     }
     // 3.allocate buffers
@@ -167,7 +167,7 @@ ssize_t buffered_write(buffered_file_t *bf, const void *buf, size_t count) {
 
 int buffered_flush(buffered_file_t *bf) {
     if (bf == NULL || bf->fd == -1) {
-        if (bf && bf->write_buffer_pos > 0) {
+        if (bf->write_buffer_pos > 0) {
             perror("buffered_flush: invalid file descriptor or pointer");
         }
         return -1;
@@ -178,17 +178,13 @@ int buffered_flush(buffered_file_t *bf) {
 
     size_t total_written = 0;
 
-    if (bf->preappend) {
-        // --- O_PREAPPEND LOGIC ---
-        //get file size
-        off_t current_file_size = lseek(bf->fd, 0, SEEK_END);
+    if (bf->preappend) {// --- O_PREAPPEND LOGIC ---
+        off_t current_file_size = lseek(bf->fd, 0, SEEK_END);//get file size
         if (current_file_size == -1) {
             perror("buffered_flush: lseek end error");
             return -1;
         }
-
-        //alloc temp buf to hold content
-        char *temp_buf = NULL;
+        char *temp_buf = NULL;//alloc temp buf to hold content
         if (current_file_size > 0) {
             temp_buf = malloc(current_file_size);
             if (!temp_buf) {
@@ -196,8 +192,7 @@ int buffered_flush(buffered_file_t *bf) {
                 perror("buffered_flush: memory allocation for preappend");
                 return -1;
             }
-            //read content into temp buf
-            if (lseek(bf->fd, 0, SEEK_SET) == -1) {
+            if (lseek(bf->fd, 0, SEEK_SET) == -1) {//read content into temp buf
                 perror("buffered_flush: lseek set error");
                 free(temp_buf);
                 return -1;
@@ -214,16 +209,12 @@ int buffered_flush(buffered_file_t *bf) {
                 total_read_temp += r;
             }
         }
-
-        //move to start to write new data
-        if (lseek(bf->fd, 0, SEEK_SET) == -1) {
+        if (lseek(bf->fd, 0, SEEK_SET) == -1) {//move to start to write new data
             perror("buffered_flush: lseek rewind error");
             free(temp_buf);
             return -1;
         }
-
-        //write buf content
-        while (total_written < bf->write_buffer_pos) {
+        while (total_written < bf->write_buffer_pos) {//write buf content
             ssize_t written = write(bf->fd, bf->write_buffer + total_written, bf->write_buffer_pos - total_written);
             if (written == -1) {
                 if (errno == EINTR) continue;
@@ -233,9 +224,7 @@ int buffered_flush(buffered_file_t *bf) {
             }
             total_written += written;
         }
-
-        //append old content back
-        if (current_file_size > 0 && temp_buf) {
+        if (current_file_size > 0 && temp_buf) {//append old content back
             size_t written_old = 0;
             while (written_old < current_file_size) {
                 ssize_t w = write(bf->fd, temp_buf + written_old, current_file_size - written_old);
@@ -249,6 +238,10 @@ int buffered_flush(buffered_file_t *bf) {
             }
             free(temp_buf);
         }
+        if (lseek(bf->fd, bf->file_offset + total_written, SEEK_SET) == -1) {//restore fd to correct logical position
+             perror("buffered_flush: lseek restore error");
+             return -1;
+        }
     } 
     else {
         while (total_written < bf->write_buffer_pos) {
@@ -261,9 +254,8 @@ int buffered_flush(buffered_file_t *bf) {
             total_written += written;
         }
     }
-
     bf->file_offset += total_written;
-    bf->write_buffer_pos = 0; //clear buffer
+    bf->write_buffer_pos = 0;//clear buffer
     
     return 0;
 }
@@ -278,6 +270,9 @@ int buffered_close(buffered_file_t *bf) {
         flush_res = buffered_flush(bf);
     }
     close_res = close(bf->fd);
+    if (close_res == -1) {
+        perror("buffered_close: file close error");
+    }
     
     free(bf->read_buffer); 
     free(bf->write_buffer);

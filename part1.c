@@ -8,11 +8,9 @@
 #include <errno.h>
 #include <string.h>
 
-#define SIZE 10
-
 int main(int argc, char *argv[]) {
     int fdout;
-    ssize_t charsw;  // how manny chars were written
+    ssize_t charsw;  //how manny chars were written
     
     if (argc != 5) {
         fprintf(stderr, "Usage: %s <parent_message> <child1_message> <child2_message> <count>\n", argv[0]);
@@ -37,7 +35,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (pid1 == 0) {
-        sleep(2);//child1
+        sleep(1);//child1
         for (int i = 0; i < times_to_write; i++) {
             charsw = write(fdout, child1_message, strlen(child1_message));
             if (charsw < 0) {
@@ -57,7 +55,7 @@ int main(int argc, char *argv[]) {
 
     if (pid2 == 0) {
         //child2
-        sleep(2);
+        sleep(3);
         for (int i = 0; i < times_to_write; i++) {
             charsw = write(fdout, child2_message, strlen(child2_message));
             if (charsw < 0) {

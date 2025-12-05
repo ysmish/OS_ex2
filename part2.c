@@ -9,7 +9,6 @@
 #include <string.h>
 
 #define LOCK_FILE "lockfile.lock"
-#define SIZE 10
 
 int LOCK_FILE_fd = -1;   //file descriptor for the lock file
 
@@ -38,6 +37,7 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         if (pid == 0) {//for nth child process
+            setbuf(stdout, NULL);
             lock();
             writemessage(argv[i + 1], times_to_write);
             unlock();
@@ -62,7 +62,7 @@ void lock(void) {
             perror("open lockfile");
             exit(EXIT_FAILURE);
         }
-        usleep(100); //wait and try again if lock exists
+        usleep(100);//wait and try again if lock exists
     }
     LOCK_FILE_fd = fd; //save acquired fd
 }

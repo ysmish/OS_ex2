@@ -29,9 +29,6 @@ typedef struct {
 
     int last_operation; //indicator of the last operation, 0 for none/clear, 1 for read, 2 for write
     off_t file_offset; //the logical file offset maintained by the buffer system
-
-    size_t rb_stored; //number of valid bytes currently stored in read buffer
-    size_t wb_stored; //number of valid bytes currently stored in write buffer
 } buffered_file_t;
 
 // Function to wrap the original open function
