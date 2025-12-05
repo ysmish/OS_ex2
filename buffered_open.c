@@ -1,4 +1,4 @@
-#define _GNU_SOURCE 
+#define _GNU_SOURCE  //for O_TMPFILE not sure if it's really needed
 #include "buffered_open.h"
 #include <stdlib.h>
 #include <stdarg.h>
